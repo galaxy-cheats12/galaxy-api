@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GALAXY — Redeem</title>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+<style>
+  :root { --bg:#0b0b0e; --panel:#131316; --border:#26262c; --accent:#a855f7;
+          --text:#ebebf0; --dim:#a0a0aa; --mute:#646470; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text);
+         font:14px/1.5 'Segoe UI',system-ui,sans-serif;
+         min-height:100vh; display:flex; align-items:center; justify-content:center; }
+  .card { width:420px; background:var(--panel); border:1px solid var(--border);
+          border-radius:14px; padding:32px; }
+  .logo { display:flex; align-items:center; gap:12px; margin-bottom:24px; }
+  .mark { width:40px; height:40px; border-radius:10px; background:#7e40be;
+          display:flex; align-items:center; justify-content:center;
+          font-size:22px; color:#fff; }
+  .brand { font-size:18px; font-weight:700; letter-spacing:.5px; }
+  .brand small { display:block; font-size:11px; color:var(--mute);
+                 letter-spacing:2px; font-weight:400; }
+  h1 { font-size:16px; margin:0 0 4px; font-weight:600; }
+  p.sub { color:var(--mute); font-size:12px; margin:0 0 20px; }
+  label { display:block; font-size:12px; color:var(--dim); margin:14px 0 6px; }
+  input { width:100%; padding:11px 14px; background:#0e0e11;
+          border:1px solid var(--border); border-radius:8px; color:var(--text);
+          font:14px 'Segoe UI',system-ui,sans-serif; outline:none;
+          transition:border-color .15s; }
+  input:focus { border-color:var(--accent); }
+  button { width:100%; margin-top:20px; padding:12px; background:var(--accent);
+           color:#fff; border:0; border-radius:8px; font:600 14px 'Segoe UI',sans-serif;
+           cursor:pointer; transition:filter .15s; }
+  button:hover { filter:brightness(1.1); }
+  button:disabled { opacity:.5; cursor:default; }
+  .cf-turnstile { margin-top:16px; }
+  #out { margin-top:18px; padding:12px; background:#0e0e11;
+         border:1px solid var(--border); border-radius:8px; font-size:12px;
+         font-family:Consolas,monospace; color:var(--dim);
+         word-break:break-all; white-space:pre-wrap; display:none; }
+  #out.show { display:block; }
+  #out.ok { color:#50dc82; border-color:#2a5238; }
+  #out.err { color:#ff4b6e; border-color:#5a2733; }
+  .tok { color:var(--accent); user-select:all; font-weight:600; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">
+    <div class="mark">☾</div>
+    <div class="brand">GALAXY<small>CS2</small></div>
+  </div>
+  <h1>Redeem your key</h1>
+  <p class="sub">Paste your key below. Token is valid for 24 hours from redemption.</p>
+
+  <form id="f">
+    <label for="key">License key</label>
+    <input id="key" placeholder="GXY-XXXXX-XXXXX-XXXXX-XXXXX"
+           autocomplete="off" spellcheck="false" required>
+    <label for="email">Email (optional)</label>
+    <input id="email" type="email" placeholder="you@example.com" autocomplete="off">
+    <div class="cf-turnstile" data-sitekey="YOUR_SITE_KEY"></div>
+    <button id="btn" type="submit">Redeem</button>
+  </form>
+
+  <pre id="out"></pre>
+</div>
+
+<script>
+const API = "";  // same origin when served from FastAPI; change to full URL if hosted elsewhere
+
+document.getElementById("f").onsubmit = async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById("btn");
+  const out = document.getElementById("out");
+  btn.disabled = true;
+
+  const tsEl = document.querySelector('[name="cf-turnstile-response"]');
+  const turnstile = tsEl ? tsEl.value : null;
+
+  try {
+    const r = await fetch(API + "/api/redeem", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        key: document.getElementById("key").value.trim(),
+        email: document.getElementById("email").value.trim() || null,
+        turnstile
+      })
+    });
+    const j = await r.json();
+    out.className = "show " + (r.ok ? "ok" : "err");
+    if (r.ok) {
+      out.innerHTML = "Redeemed successfully.\n\nToken:\n<span class='tok'>"
+                    + j.token + "</span>\n\nPaste this into the loader. Expires in 24h.";
+    } else {
+      out.textContent = "Error: " + (j.detail || "unknown");
+    }
+  } catch (err) {
+    out.className = "show err";
+    out.textContent = "Network error: " + err.message;
+  } finally {
+    btn.disabled = false;
+  }
+};
+</script>
+</body>
+</html>
